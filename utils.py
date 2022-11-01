@@ -1,9 +1,9 @@
 #####################################
 ### Functions for ICC calculation ###
 #####################################
-
+from collections.abc import Iterable
 import numpy as np
-from scipy.stats import f, chi2, t
+from scipy.stats import f, chi2
 
 
 def icc(g, e):
@@ -22,7 +22,7 @@ def icc(g, e):
 
 
 def confidence_interval_icc(MS_b, MS_w, df_b, df_w, n, alpha=0.05):
-    """Calculate confidence intervals for ICC
+    """Calculate confidence intervals for ICC. ANOVA Slide 36
 
     Args:
         MS_b (float): Mean Squares between (random effect in ANOVA table)
@@ -40,6 +40,38 @@ def confidence_interval_icc(MS_b, MS_w, df_b, df_w, n, alpha=0.05):
     print(f"*** Confidence interval: {lower:.4f} - {upper:.4f} ***")
 
 
+def general_approach_icc(
+    Sigma_g: Iterable,
+    Sigma_e: Iterable,
+    var_g: Iterable,
+    var_e: Iterable,
+    alpha: float = 0.05,
+):
+    """General (F) approach for ICC calculation
+    with confidence intervals. Use if multiple VCs present,
+    or ML/REML estimation used. ANOVA Slide 75
+
+    Args:
+        Sigma_g (Iterable): List of group variance components
+        Sigma_e (Iterable): List of residual variance components
+        var_g (Iterable): List of variances for group components
+        var_e (Iterable): List of variances for residual components
+        alpha (float, optional): Confidence threshold. Defaults to 0.05.
+    """
+
+    s_g, var_s_g = sum(Sigma_g), sum(var_g)
+    s_e, var_s_e = sum(Sigma_e), sum(var_e)
+    ICC = icc(s_g, s_e)
+
+    df_g = 2 * s_g**2 / var_s_g
+    df_e = 2 * s_e**2 / var_s_e
+    F_l = f.ppf(alpha / 2, df_g, df_e)
+    F_u = f.ppf((1 - alpha / 2), df_g, df_e)
+    LCL = (s_g * F_l) / ((s_g * F_l) + s_e)
+    UCL = (s_g * F_u) / ((s_g * F_u) + s_e)
+    print(f"*** ICC = {ICC:.4f} with CI: {LCL:.4f} - {UCL:.4f} ***")
+
+
 #########################################
 #### Sum of Variance components + CI ####
 #########################################
@@ -47,7 +79,8 @@ from scipy.stats import chi2
 
 
 def sum_of_var(Sigma_g, Sigma_e, MS_b, MS_w, cn, df_b, df_w, alpha=0.05):
-    """Calculate total variance and confidence intervals
+    """Calculate total variance and confidence intervals.
+    ANOVA Slide 40
 
     Args:
         Sigma_g (float): VC for between group variance
@@ -73,6 +106,32 @@ def sum_of_var(Sigma_g, Sigma_e, MS_b, MS_w, cn, df_b, df_w, alpha=0.05):
     UCL = (df_t * Sigma_t) / (L_chi2)
     print(f"*** Total Variability: {Sigma_t:.2f} ***")
     print(f"*** Confidence interval {LCL:.2f} - {UCL:.2f} ***")
+
+
+def general_approach_total_variance(
+    Sigma_g: Iterable,
+    Sigma_e: Iterable,
+    var_g: Iterable,
+    alpha: float = 0.05,
+):
+    """Calculate total variance with generic (F) approach.
+    Use this calculation for any sum of VCs, especially for ML and REML.
+    Args:
+        Sigma_g (Iterable): List of group variance components
+        Sigma_e (Iterable): List of residual variance components
+        var_g (Iterable): List of all values in ASYCOV covariance matrix
+        alpha (float, optional): Confidence threshold. Defaults to 0.05.
+    """
+
+    s_g, var_s_g = sum(Sigma_g), sum(var_g)
+    s_e = sum(Sigma_e)
+    s_tot = s_g + s_e
+    df_tot = 2 * s_tot**2 / var_s_g
+    Chi2_l = chi2.ppf(alpha / 2, df_tot)
+    Chi2_u = chi2.ppf((1 - alpha / 2), df_tot)
+    LCL = (df_tot * s_tot) / Chi2_u
+    UCL = (df_tot * s_tot) / Chi2_l
+    print(f"*** Total variance = {s_tot} CI: {LCL:.4f} - {UCL:.4f}")
 
 
 ###############################
