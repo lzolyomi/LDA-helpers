@@ -131,7 +131,7 @@ def general_approach_total_variance(
     Chi2_u = chi2.ppf((1 - alpha / 2), df_tot)
     LCL = (df_tot * s_tot) / Chi2_u
     UCL = (df_tot * s_tot) / Chi2_l
-    print(f"*** Total variance = {s_tot} CI: {LCL:.4f} - {UCL:.4f}")
+    print(f"*** Total variance = {s_tot:.4f} CI: {LCL:.4f} - {UCL:.4f}")
 
 
 ###############################
@@ -141,7 +141,7 @@ from logging import warning
 
 
 def likelihood_ratio_test(theta, theta_0, df):
-    """Do a likelihood ratio test
+    """Do a likelihood ratio test. ANOVA Slide 70.
 
     Args:
         theta (float): Log-likelihood from extended model
@@ -149,6 +149,7 @@ def likelihood_ratio_test(theta, theta_0, df):
         df (int): Degrees of freedom for test (difference in params)
     """
     LRT = theta_0 - theta
+    assert LRT >= 0, "Test statistic negative! Check thetas."
     p = 1 - chi2.cdf(LRT, df)
     print(
         f"*** P-value from Chi-Square: {p:.4f} *** \n *** If below 0.05, reject null hypothesis ***"
@@ -157,14 +158,14 @@ def likelihood_ratio_test(theta, theta_0, df):
         warning(" P-value extremely low!")
 
 
-#############################################
-#### Minimize variance for time profiles ####
-#############################################
+###############################################
+#### Subject-specific Linear time profiles ####
+###############################################
 
 
 def minimze_variability(tau_0, tau_1, off_diag, s2_r):
     """Minimize variablity for linear time profiles
-    in subject-specific models
+    in subject-specific models. LMM Slide 34
 
     Args:
         tau_0 (float): variance of intercept
@@ -178,3 +179,29 @@ def minimze_variability(tau_0, tau_1, off_diag, s2_r):
     print(
         f"*** Minimum variance: {min_var:.3f} *** \n*** Minimum variance achieved at time point {min_t:.3f} ***"
     )
+
+
+def var_at_time(covmatrix: np.ndarray, Sigma_r: float, t: float):
+    tau_0 = covmatrix[0, 0]
+    tau_1 = covmatrix[1, 1]
+    off_diag = covmatrix[1, 0]
+    var = tau_0 + 2 * off_diag * t + tau_1 * t**2 + Sigma_r
+    return var
+
+
+def correlation_two_measurements(
+    covmatrix: np.ndarray, Sigma_r: float, t_1: float, t_2: float
+):
+
+    assert covmatrix[1, 0] == covmatrix[0, 1], " Non-symmetric covariance matrix!"
+    tau_0 = covmatrix[0, 0]
+    tau_1 = covmatrix[1, 1]
+    off_diag = covmatrix[1, 0]
+    var_t_1 = var_at_time(covmatrix, Sigma_r, t_1)
+    var_t_2 = var_at_time(covmatrix, Sigma_r, t_2)
+    cov_t_1_t_2 = tau_0 + off_diag * (t_1 + t_2) + t_1 * t_2 * tau_1
+
+    corr = cov_t_1_t_2 / np.sqrt(var_t_1 * var_t_2)
+    print(f"*** COVARIANCE = {cov_t_1_t_2:.4f} ***")
+    print(f"*** CORRELATION = {corr:.4f} ***")
+    return corr
