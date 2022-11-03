@@ -182,6 +182,17 @@ def minimze_variability(tau_0, tau_1, off_diag, s2_r):
 
 
 def var_at_time(covmatrix: np.ndarray, Sigma_r: float, t: float):
+    """Calculate the variance at time point t in a subject specific
+    linear time profile model. LMM Slide 34
+
+    Args:
+        covmatrix (np.ndarray): the covariance matrix from sas output
+        Sigma_r (float): residual variance component
+        t (float): time point at which the variance must be calculated
+
+    Returns:
+        float: variance at time t.
+    """
     tau_0 = covmatrix[0, 0]
     tau_1 = covmatrix[1, 1]
     off_diag = covmatrix[1, 0]
@@ -192,6 +203,18 @@ def var_at_time(covmatrix: np.ndarray, Sigma_r: float, t: float):
 def correlation_two_measurements(
     covmatrix: np.ndarray, Sigma_r: float, t_1: float, t_2: float
 ):
+    """Calculates the correlation between two measurements taken
+    at different time points. LMM Slide 34
+
+    Args:
+        covmatrix (np.ndarray): covariance matrix from SAS output
+        Sigma_r (float): Residual variance component
+        t_1 (float): time point 1
+        t_2 (float): time point 2
+
+    Returns:
+        float: covariance between measurements at t_1 and t_2
+    """
 
     assert covmatrix[1, 0] == covmatrix[0, 1], " Non-symmetric covariance matrix!"
     tau_0 = covmatrix[0, 0]
